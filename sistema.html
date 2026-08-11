@@ -1439,6 +1439,8 @@ async function excluirProdutoClienteSuite(id) {
   if (!confirm('Remover este produto?')) return;
   var r = await sb.from('produtos_cliente').delete().eq('id', id);
   if (r.error) { alert('Erro: ' + r.error.message); return; }
+  var idxSel = itensSelecionados.indexOf(id);
+  if (idxSel > -1) itensSelecionados.splice(idxSel, 1);
   await dbLoad(function() { renderProdutosClienteSuite(); });
 }
 
@@ -1465,14 +1467,18 @@ function togglePkg(id) {
 
 function selecionarTodos() {
   itensSelecionados = [];
-  var cards = document.querySelectorAll('.pkg-card');
+  var activePage = document.querySelector('.suite-page.active');
+  var containerId = (activePage && activePage.id === 'sp-produtos') ? 'lista-produtos-cliente' : 'lista-pacotes';
+  var container = document.getElementById(containerId);
+  var cards = container ? container.querySelectorAll('.pkg-card') : [];
   for (var i = 0; i < cards.length; i++) {
-    var id = cards[i].id.replace('pkgcard-','');
-    itensSelecionados.push(id);
-    cards[i].classList.add('selected');
+  var id = cards[i].id.replace('pkgcard-','').replace('prodcard-','');
+  itensSelecionados.push(id);
+  cards[i].classList.add('selected');
   }
-  document.getElementById('btn-solicitar-wrap').style.display = itensSelecionados.length > 0 ? 'block' : 'none';
-}
+  var btnAll = document.getElementById('btn-solicitar-wrap');
+  if (btnAll) btnAll.style.display = itensSelecionados.length > 0 ? 'block' : 'none';
+  }
 
 // ── Solicitar envio ──
 function renderDeclaracao() {
@@ -1584,6 +1590,7 @@ function abrirSolicitarEnvio() {
 
 function getPkg(id) {
   for (var i = 0; i < DB.pacotes.length; i++) { if (DB.pacotes[i].id === id) return DB.pacotes[i]; }
+  for (var j = 0; j < DB.produtosCliente.length; j++) { if (DB.produtosCliente[j].id === id) { var pc = DB.produtosCliente[j]; return {id:pc.id, loja:pc.nome || pc.loja || 'Produto', peso:parseFloat(pc.peso)||0, foto:pc.foto||'', qtd:1, rastreio:'', obs:pc.descricao||''}; } }
   return null;
 }
 
@@ -2958,28 +2965,34 @@ function renderProdutosClienteSuite() {
   var el = document.getElementById('lista-produtos-cliente');
   if (!el) return;
   if (lista.length === 0) {
-    el.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--gray-light);font-size:14px;">Nenhum produto cadastrado ainda.</div>';
-    return;
+  el.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--gray-light);font-size:14px;">Nenhum produto cadastrado ainda.</div>';
+  var btn0 = document.getElementById('btn-solicitar-wrap');
+  if (btn0) btn0.style.display = 'none';
+  return;
   }
   var html = '';
   for (var i = 0; i < lista.length; i++) {
-    var p = lista[i];
-    var fotoHtml = p.foto
-      ? '<img src="'+p.foto+'" onclick="abrirFoto(this.src,this.alt)" alt="'+p.nome+'" style="width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0;cursor:pointer;">'
-      : '<div style="width:64px;height:64px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#AEAEB2" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>';
-    html += '<div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;">'
-      + fotoHtml
-      + '<div style="flex:1;min-width:0;">'
-      + '<div style="font-size:14px;font-weight:600;color:var(--black);">'+p.nome+'</div>'
-      + (p.loja ? '<div style="font-size:12px;color:var(--gray-light);">'+p.loja+'</div>' : '')
-      + (p.descricao ? '<div style="font-size:12px;color:var(--gray);margin-top:3px;">'+p.descricao+'</div>' : '')
-      + (p.peso ? '<div style="font-size:12px;color:var(--gray);margin-top:3px;">'+parseFloat(p.peso).toFixed(2)+'kg</div>' : '')
-      + '</div>'
-      + '<button onclick="excluirProdutoClienteSuite(\'' + p.id + '\')" style="background:none;border:none;cursor:pointer;padding:4px;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>'
-      + '</div>';
+  var p = lista[i];
+  var selecionado = itensSelecionados.indexOf(p.id) > -1;
+  var fotoHtml = p.foto
+  ? '<img src="'+p.foto+'" onclick="event.stopPropagation();abrirFoto(this.src,this.alt)" alt="'+p.nome+'" style="width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0;cursor:pointer;">'
+  : '<div style="width:64px;height:64px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#AEAEB2" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>';
+  html += '<div id="prodcard-'+p.id+'" class="pkg-card'+(selecionado?' selected':'')+'" onclick="checkProdutoCliente(\''+p.id+'\')" style="cursor:pointer;">'
+  + '<div class="pkg-card-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>'
+  + fotoHtml
+  + '<div style="flex:1;min-width:0;">'
+  + '<div style="font-size:14px;font-weight:600;color:var(--black);">'+p.nome+'</div>'
+  + (p.loja ? '<div style="font-size:12px;color:var(--gray-light);">'+p.loja+'</div>' : '')
+  + (p.descricao ? '<div style="font-size:12px;color:var(--gray);margin-top:3px;">'+p.descricao+'</div>' : '')
+  + (p.peso ? '<div style="font-size:12px;color:var(--gray);margin-top:3px;">'+parseFloat(p.peso).toFixed(2)+'kg</div>' : '')
+  + '</div>'
+  + '<button onclick="event.stopPropagation();excluirProdutoClienteSuite(\''+p.id+'\')" style="background:none;border:none;cursor:pointer;padding:4px;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>'
+  + '</div>';
   }
   el.innerHTML = html;
-}
+  var btn = document.getElementById('btn-solicitar-wrap');
+  if (btn) btn.style.display = itensSelecionados.length > 0 ? 'block' : 'none';
+  }
 
 
 function checkProdutoCliente(id) {
