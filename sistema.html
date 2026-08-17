@@ -784,9 +784,18 @@ tr:hover td{background:var(--bg);}
             <input type="range" id="calc-slider" min="0.1" max="30" step="0.1" value="1" oninput="document.getElementById('calc-peso').value=parseFloat(this.value).toFixed(1); calcFrete()" style="width:100%;accent-color:var(--black);cursor:pointer;">
           </div>
         </div>
+                <div class="sc">
+                            <div style="padding:16px 16px 12px;">
+                                          <div style="font-size:13px;font-weight:700;color:var(--black);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;">Valor da compra</div>
+                                          <div style="display:flex;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;">
+                                                          <span style="padding:12px 16px;background:var(--bg);font-size:15px;font-weight:600;color:var(--gray);display:flex;align-items:center;">€</span>span>
+                                                          <input type="number" id="calc-valor" value="0" min="0" step="0.01" placeholder="0.00" oninput="calcFrete()" style="flex:1;padding:12px 14px;border:none;font-size:18px;font-family:inherit;outline:none;">
+                                          </div>
+                            </div>
+                </div>
         <div id="calc-cards" style="display:flex;flex-direction:column;gap:13px;"></div>
         <div style="background:var(--beige);border-radius:12px;padding:14px 16px;">
-          <p style="font-size:11px;color:var(--gray);line-height:1.7;">📋 <strong>Tabela oficial Correos de España 2026</strong> — tarifa de balcão.<br>💱 Câmbio EUR/BRL estimado.<br>📦 Taxa de serviço BW Europa (€7/kg) incluída.</p>
+                    <p style="font-size:11px;color:var(--gray);line-height:1.7;">📋 <strong>Tabela oficial Correos de España 2026</strong> — tarifa de balcão.<br>💱 Câmbio EUR/BRL estimado.<br>📦 Taxa de serviço BW Europa (30% sobre o valor da compra) incluída.</p>
         </div>
       </div>
     </div>
@@ -2919,13 +2928,15 @@ var CORREOS = {
   economico: function(kg) { if(kg<=1)return 34.90;if(kg<=2)return 38.85;if(kg<=3)return 42.80;if(kg<=4)return 46.75;if(kg<=5)return 50.70;return Math.round((50.70+Math.ceil(kg-5)*3.95)*100)/100; },
   light: function(kg) { if(kg>2)return null;if(kg<=0.25)return 15.04;if(kg<=0.50)return 17.60;if(kg<=1)return 21.50;if(kg<=1.50)return 25.30;return 28.90; }
 };
-var CAMBIO = 6.10; var TAXA_KG = 7;
+var CAMBIO = 6.10; var TAXA_SERVICO_PCT = 0.30;
 
 function getCorreosRate(modal, peso) { return CORREOS[modal] ? CORREOS[modal](peso) : 0; }
 
 function calcFrete() {
   var el = document.getElementById('calc-peso'); if(!el) return;
   var peso = parseFloat(el.value)||1; if(peso>30){peso=30;el.value=30;}
+      var valorEl = document.getElementById('calc-valor');
+      var valorCompra = valorEl ? (parseFloat(valorEl.value)||0) : 0;
   var modalidades = [
     {key:'premium', nome:'CORREOS: PAQ PREMIUM EMS — SUJEITO A CÁLCULO VOLUMÉTRICO (PRAZO: 10-20 DIAS)'},
     {key:'standard', nome:'CORREOS: PAQ STANDARD — SUJEITO A CÁLCULO VOLUMÉTRICO (PRAZO: 10-20 DIAS)'},
@@ -2939,7 +2950,7 @@ function calcFrete() {
   var html = '';
   for (var i = 0; i < modalidades.length; i++) {
     var m = modalidades[i];
-    var servico = Math.round(peso * TAXA_KG * 100) / 100;
+        var servico = Math.round(valorCompra * TAXA_SERVICO_PCT * 100) / 100;
     if (m.maxkg && peso > m.maxkg) {
       html += '<div class="sc" style="overflow:hidden;opacity:.5;"><div style="padding:20px;text-align:center;"><div style="font-size:11px;font-weight:700;color:#B0BAD0;text-transform:uppercase;margin-bottom:12px;">'+m.nome+'</div><div style="padding:10px;background:#FFF0F0;border-radius:10px;font-size:13px;color:#C62828;font-weight:600;">⚠️ Não disponível acima de '+m.maxkg+'kg</div></div></div>';
       continue;
